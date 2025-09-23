@@ -1,2 +1,28 @@
 ---
 # tasks file for mysql
+---
+- name: Install MariaDB
+  apt:
+    name:
+      - mariadb-server
+      - mariadb-client
+    state: present
+    update_cache: yes
+
+- name: Ensure MySQL is started
+  service:
+    name: mysql
+    state: started
+    enabled: yes
+
+- name: Copy initial SQL
+  copy:
+    src: files/init.sql
+    dest: /tmp/init.sql
+
+- name: Remove temp SQL
+  file:
+    path: /tmp/init.sql
+    state: absent
+
+...
