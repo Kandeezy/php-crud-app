@@ -1,5 +1,5 @@
 ---
-- name: Deploy LAMP stack + PHP app
+- name: Deploy PHP_Crud app
   hosts: "{{ target_group | default('staging') }}"
   become: true
   vars:
