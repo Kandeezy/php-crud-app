@@ -1,0 +1,12 @@
+---
+- name: Deploy LAMP stack + PHP app
+  hosts: "{{ target_group | default('staging') }}"
+  become: true
+  vars:
+    artifact_path: "{{ artifact_path | default('') }}"
+    mysql_app_password: "{{ mysql_app_password | default('app_pass') }}"
+  roles:
+    - apache_php
+    - mysql_config
+    - deploy_app
+...
