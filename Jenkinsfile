@@ -43,7 +43,7 @@ pipeline {
           //withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds-id']]) {
             // Uncomment if you want to upload to S3 as well
             // sh "aws s3 cp artifacts/phpapp-${params.ARTIFACT_VERSION}.zip s3://my-artifact-bucket/phpapp-${params.ARTIFACT_VERSION}.zip"
-          }
+
 
           // Upload to Nexus (using username/password credentials stored in Jenkins)
           // Jenkins credentials('nexus-user-id') used in environment block exposes:
@@ -78,7 +78,7 @@ pipeline {
             done
           """
         }
-      
+      }
     }
 
     // --- NEW STAGE: Download artifact from Nexus (added here) ---
