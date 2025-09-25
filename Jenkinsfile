@@ -29,7 +29,7 @@ pipeline {
         // For a simple PHP app, we just archive files. If composer/phpunit needed, run here.
         sh 'php -v || true'
         sh 'echo "Running simple lint"'
-        sh 'php -l roles/deploy_app/files/index.php || true'
+        sh 'php -l deploy_app/files/index.php || true'
       }
     }
 
