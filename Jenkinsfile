@@ -13,7 +13,7 @@ pipeline {
     NEXUS_CRED = credentials('nexus-user-id')        // provides NEXUS_CRED_USR and NEXUS_CRED_PSW
     // Nexus base URL (no trailing slash), and repository path where uploads should go:
     NEXUS_URL = "http://3.125.120.16:8081/nexus/content"
-    NEXUS_REPO_PATH = "repository/releases/php-crud-app"   // e.g. repository/releases/<repoName>
+    NEXUS_REPO_PATH = "repositories/releases"   // e.g. repository/releases/<repoName>
     //AWS_CREDENTIALS = credentials('aws-creds-id')    // if using S3 (optional)
   }
 
