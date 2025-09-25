@@ -194,40 +194,103 @@ pipeline {
     stage('Download Artifact from Nexus') {
       steps {
         script {
-          def downloadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
-          def outFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
-          echo "Downloading artifact from Nexus: ${downloadUrl} -> ${outFile}"
+          // Ensure ARTIFACT_VERSION is available (fallback default)
+          env.ARTIFACT_VERSION = params.ARTIFACT_VERSION ?: '1.0.0'
 
-          // Use username/password credential to download
-          withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
-            sh '''#!/bin/bash
+          // Compute values in Groovy and export to environment for shell use
+          env.DOWNLOAD_URL = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${env.ARTIFACT_VERSION}/phpapp-${env.ARTIFACT_VERSION}.zip"
+          env.OUT_FILE = "artifacts/phpapp-${env.ARTIFACT_VERSION}.zip"
+
+          echo "Downloading artifact from Nexus: ${env.DOWNLOAD_URL} -> ${env.OUT_FILE}"
+
+          withCredentials([usernamePassword(credentialsId: 'nexus-user-id',
+                                       usernameVariable: 'NEXUS_USER',
+                                       passwordVariable: 'NEXUS_PSW')]) {
+            sh '''#!/usr/bin/env bash
               set -euo pipefail
-              mkdir -p artifacts
+
+              # Local copies (defensive)
+              DOWNLOAD_URL="${DOWNLOAD_URL}"
+              OUT_FILE="${OUT_FILE:-artifacts/phpapp-1.0.0.zip}"
               RETRIES=3
               SLEEP=3
-              for i in \$(seq 1 \$RETRIES); do
-                echo "Attempt \$i: downloading from Nexus..."
-                HTTP_CODE=\$(curl -sS -u "${NEXUS_USER}:${NEXUS_PSW}" -w '%{http_code}' -o ${outFile} "${downloadUrl}" || echo "000")
-                echo "HTTP_CODE=\$HTTP_CODE"
-                if [ "\$HTTP_CODE" = "200" ]; then
-                  echo "Download successful (HTTP \$HTTP_CODE)"
+
+              echo "DOWNLOAD_URL=${DOWNLOAD_URL}"
+              echo "OUT_FILE=${OUT_FILE}"
+
+              mkdir -p "$(dirname "${OUT_FILE}")"
+
+              for i in $(seq 1 ${RETRIES}); do
+                echo "Attempt ${i}: downloading from Nexus..."
+                # -sS for silent but show errors; -w to get HTTP code; -f isn't used so we capture HTTP code
+                HTTP_CODE=$(curl -sS -u "${NEXUS_USER}:${NEXUS_PSW}" -w '%{http_code}' -o "${OUT_FILE}" "${DOWNLOAD_URL}" || echo "000")
+                echo "HTTP_CODE=${HTTP_CODE}"
+                if [[ "${HTTP_CODE}" == "200" || "${HTTP_CODE}" == "201" || "${HTTP_CODE}" == "204" ]]; then
+                  echo "Download successful (HTTP ${HTTP_CODE})"
                   break
                 else
-                  echo "Download attempt \$i failed with HTTP \$HTTP_CODE"
-                  if [ \$i -lt \$RETRIES ]; then
-                    echo "Retrying in \$SLEEP seconds..."
-                    sleep \$SLEEP
+                  echo "Download attempt ${i} failed with HTTP ${HTTP_CODE}"
+                  if [[ ${i} -lt ${RETRIES} ]]; then
+                    echo "Retrying in ${SLEEP} seconds..."
+                    sleep ${SLEEP}
                   else
                     echo "All download attempts failed."
+                    # show what exists for debugging
+                    ls -la "$(dirname "${OUT_FILE}")" || true
                     exit 1
                   fi
                 fi
               done
             '''
-          }
-        }
-      }
-    }
+          } // withCredentials
+        } // script
+      } // steps
+    } // stage
+
+
+
+
+
+
+
+
+    // stage('Download Artifact from Nexus') {
+    //   steps {
+    //     script {
+    //       def downloadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
+    //       def outFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
+    //       echo "Downloading artifact from Nexus: ${downloadUrl} -> ${outFile}"
+
+    //       // Use username/password credential to download
+    //       withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
+    //         sh '''#!/bin/bash
+    //           set -euo pipefail
+    //           mkdir -p artifacts
+    //           RETRIES=3
+    //           SLEEP=3
+    //           for i in \$(seq 1 \$RETRIES); do
+    //             echo "Attempt \$i: downloading from Nexus..."
+    //             HTTP_CODE=\$(curl -sS -u "${NEXUS_USER}:${NEXUS_PSW}" -w '%{http_code}' -o ${outFile} "${downloadUrl}" || echo "000")
+    //             echo "HTTP_CODE=\$HTTP_CODE"
+    //             if [ "\$HTTP_CODE" = "200" ]; then
+    //               echo "Download successful (HTTP \$HTTP_CODE)"
+    //               break
+    //             else
+    //               echo "Download attempt \$i failed with HTTP \$HTTP_CODE"
+    //               if [ \$i -lt \$RETRIES ]; then
+    //                 echo "Retrying in \$SLEEP seconds..."
+    //                 sleep \$SLEEP
+    //               else
+    //                 echo "All download attempts failed."
+    //                 exit 1
+    //               fi
+    //             fi
+    //           done
+    //         '''
+    //       }
+    //     }
+    //   }
+    // }
 
     stage('Deploy to Staging') {
       when {
