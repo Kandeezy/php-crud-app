@@ -190,7 +190,7 @@ pipeline {
       //}
     //}
 
-    // --- NEW STAGE: Download artifact from Nexus (added here) ---
+    // --- Download artifact from Nexus ---
     stage('Download Artifact from Nexus') {
       steps {
         script {
