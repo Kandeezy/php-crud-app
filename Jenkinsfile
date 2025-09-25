@@ -38,30 +38,20 @@ pipeline {
         script {
           // Create a zip artifact
           sh "mkdir -p artifacts && zip -r artifacts/phpapp-${params.ARTIFACT_VERSION}.zip deploy_app/files/*"
+        }
+      }
+    }
 
-          // Upload to S3 (optional) - retained for reference
-          //withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds-id']]) {
-            // Uncomment if you want to upload to S3 as well
-            // sh "aws s3 cp artifacts/phpapp-${params.ARTIFACT_VERSION}.zip s3://my-artifact-bucket/phpapp-${params.ARTIFACT_VERSION}.zip"
-
-
-          // Upload to Nexus (using username/password credentials stored in Jenkins)
-          // Jenkins credentials('nexus-user-id') used in environment block exposes:
-          // NEXUS_CRED_USR and NEXUS_CRED_PSW
-          //def artifactFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
-          //def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
-
-          //echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
-
-          // Try upload with curl and simple retry logic
+    stage('Upload to Nexus') {
+      steps{
+        script{
+          def artifactFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
+          def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
+          echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
+        
           withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
             sh '''#!/bin/bash
               set -euo pipefail
-              
-              artifactFile = "artifacts/phpapp-${ARTIFACT_VERSION}.zip"
-              nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${ARTIFACT_VERSION}/phpapp-${ARTIFACT_VERSION}.zip"
-              echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
-
               RETRIES=3
               SLEEP=3
               for i in \$(seq 1 \$RETRIES); do
@@ -86,7 +76,55 @@ pipeline {
           }
         }
       }
-    }
+    } 
+          // Upload to S3 (optional) - retained for reference
+          //withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds-id']]) {
+            // Uncomment if you want to upload to S3 as well
+            // sh "aws s3 cp artifacts/phpapp-${params.ARTIFACT_VERSION}.zip s3://my-artifact-bucket/phpapp-${params.ARTIFACT_VERSION}.zip"
+
+
+          // Upload to Nexus (using username/password credentials stored in Jenkins)
+          // Jenkins credentials('nexus-user-id') used in environment block exposes:
+          // NEXUS_CRED_USR and NEXUS_CRED_PSW
+          //def artifactFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
+          //def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
+
+          //echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
+
+          // Try upload with curl and simple retry logic
+          
+            //sh '''#!/bin/bash
+              //set -euo pipefail
+              
+              //artifactFile = "artifacts/phpapp-${ARTIFACT_VERSION}.zip"
+              //nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${ARTIFACT_VERSION}/phpapp-${ARTIFACT_VERSION}.zip"
+              //echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
+
+              //RETRIES=3
+              //SLEEP=3
+              //for i in \$(seq 1 \$RETRIES); do
+                //echo \"Attempt \$i: uploading to Nexus...\"
+                //HTTP_CODE=\$(curl -sS -u \"${NEXUS_CRED_USR}:${NEXUS_CRED_PSW}\" -w '%{http_code}' --upload-file ${artifactFile} "${nexusUploadUrl}" -o /dev/null || echo "000")
+                //echo "HTTP_CODE=\$HTTP_CODE"
+                //if [ "\$HTTP_CODE" = "201" ] || [ "\$HTTP_CODE" = "200" ]; then
+                  //echo "Upload successful (HTTP \$HTTP_CODE)"
+                  //break
+                //else
+                  //echo "Upload attempt \$i failed with HTTP \$HTTP_CODE"
+                  //if [ \$i -lt \$RETRIES ]; then
+                    //echo "Retrying in \$SLEEP seconds..."
+                    //sleep \$SLEEP
+                  //else
+                    //echo "All upload attempts failed."
+                    //exit 1
+                  //fi
+                //fi
+              //done
+            //'''
+          //}
+        //}
+      //}
+    //}
 
     // --- NEW STAGE: Download artifact from Nexus (added here) ---
     stage('Download Artifact from Nexus') {
