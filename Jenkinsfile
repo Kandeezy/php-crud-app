@@ -166,9 +166,9 @@ pipeline {
     }
   } // stages
 
-  post {
-    always {
-      archiveArtifacts artifacts: 'artifacts/*.zip', fingerprint: true
-    }
-  }
+  //post {
+    //always {
+      //archiveArtifacts artifacts: 'artifacts/*.zip', fingerprint: true
+   // }
+ // }
 }
