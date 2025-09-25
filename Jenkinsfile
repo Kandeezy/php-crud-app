@@ -58,8 +58,8 @@ pipeline {
             sh '''#!/bin/bash
               set -euo pipefail
               
-              def artifactFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
-              def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
+              def artifactFile = "artifacts/phpapp-${ARTIFACT_VERSION}.zip"
+              def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${ARTIFACT_VERSION}/phpapp-${ARTIFACT_VERSION}.zip"
               echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
 
               RETRIES=3
