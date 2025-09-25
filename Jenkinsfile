@@ -37,7 +37,7 @@ pipeline {
       steps {
         script {
           // Create a zip artifact
-          sh "mkdir -p artifacts && zip -r artifacts/phpapp-${params.ARTIFACT_VERSION}.zip roles/deploy_app/files/*"
+          sh "mkdir -p artifacts && zip -r artifacts/phpapp-${params.ARTIFACT_VERSION}.zip deploy_app/files/*"
 
           // Upload to S3 (optional) - retained for reference
           //withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds-id']]) {
