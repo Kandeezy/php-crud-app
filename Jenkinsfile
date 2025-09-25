@@ -48,15 +48,20 @@ pipeline {
           // Upload to Nexus (using username/password credentials stored in Jenkins)
           // Jenkins credentials('nexus-user-id') used in environment block exposes:
           // NEXUS_CRED_USR and NEXUS_CRED_PSW
-          def artifactFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
-          def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
+          //def artifactFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
+          //def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
 
-          echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
+          //echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
 
           // Try upload with curl and simple retry logic
           withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
             sh '''#!/bin/bash
               set -euo pipefail
+              
+              def artifactFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
+              def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
+              echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
+
               RETRIES=3
               SLEEP=3
               for i in \$(seq 1 \$RETRIES); do
