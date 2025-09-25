@@ -42,30 +42,53 @@ pipeline {
       }
     }
 
+
     stage('Upload to Nexus') {
-      steps{
-        script{
-          def artifactFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
-          def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
-          echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
-        
-          withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
-            sh '''#!/bin/bash
+      steps {
+        script {
+          // compute non-secret values in Groovy and put them into env for the shell
+          env.ARTIFACT_VERSION = params.ARTIFACT_VERSION ?: '1.0.0'
+          env.ARTIFACT_FILE = "artifacts/phpapp-${env.ARTIFACT_VERSION}.zip"
+          env.NEXUS_UPLOAD_URL = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${env.ARTIFACT_VERSION}/phpapp-${env.ARTIFACT_VERSION}.zip"
+
+          echo "Uploading ${env.ARTIFACT_FILE} to Nexus at ${env.NEXUS_UPLOAD_URL}"
+
+          // Use withCredentials to inject credentials into shell env as NEXUS_USER / NEXUS_PSW
+          withCredentials([usernamePassword(credentialsId: 'nexus-user-id',
+                                       usernameVariable: 'NEXUS_USER',
+                                       passwordVariable: 'NEXUS_PSW')]) {
+          // Use a single quoted heredoc so Groovy does not interpolate secrets.
+            sh '''#!/usr/bin/env bash
               set -euo pipefail
+
+              # Local copies (defensive)
+              ARTIFACT_FILE="${ARTIFACT_FILE:-artifacts/phpapp-1.0.0.zip}"
+              NEXUS_UPLOAD_URL="${NEXUS_UPLOAD_URL}"
               RETRIES=3
               SLEEP=3
-              for i in \$(seq 1 \$RETRIES); do
-                echo \"Attempt \$i: uploading to Nexus...\"
-                HTTP_CODE=\$(curl -sS -u \"${NEXUS_CRED_USR}:${NEXUS_CRED_PSW}\" -w '%{http_code}' --upload-file ${artifactFile} "${nexusUploadUrl}" -o /dev/null || echo "000")
-                echo "HTTP_CODE=\$HTTP_CODE"
-                if [ "\$HTTP_CODE" = "201" ] || [ "\$HTTP_CODE" = "200" ]; then
-                  echo "Upload successful (HTTP \$HTTP_CODE)"
-                  break
+
+              echo "ARTIFACT_FILE=${ARTIFACT_FILE}"
+              echo "NEXUS_UPLOAD_URL=${NEXUS_UPLOAD_URL}"
+              echo "Checking artifact exists..."
+              if [[ ! -f "${ARTIFACT_FILE}" ]]; then
+                echo "ERROR: artifact not found: ${ARTIFACT_FILE}"
+                ls -la "$(dirname "${ARTIFACT_FILE}")" || true
+                exit 2
+              fi
+
+              for i in $(seq 1 ${RETRIES}); do
+                echo "Attempt ${i}: uploading to Nexus..."
+                # upload and capture http code (curl writes body to /dev/null)
+                HTTP_CODE=$(curl -sS -u "${NEXUS_USER}:${NEXUS_PSW}" -w '%{http_code}' --upload-file "${ARTIFACT_FILE}" "${NEXUS_UPLOAD_URL}" -o /dev/null || echo "000")
+                echo "HTTP_CODE=${HTTP_CODE}"
+                if [[ "${HTTP_CODE}" == "200" || "${HTTP_CODE}" == "201" || "${HTTP_CODE}" == "204" ]]; then
+                  echo "Upload successful (HTTP ${HTTP_CODE})"
+                  exit 0
                 else
-                  echo "Upload attempt \$i failed with HTTP \$HTTP_CODE"
-                  if [ \$i -lt \$RETRIES ]; then
-                    echo "Retrying in \$SLEEP seconds..."
-                    sleep \$SLEEP
+                  echo "Upload attempt ${i} failed with HTTP ${HTTP_CODE}"
+                  if [[ ${i} -lt ${RETRIES} ]]; then
+                    echo "Retrying in ${SLEEP} seconds..."
+                    sleep ${SLEEP}
                   else
                     echo "All upload attempts failed."
                     exit 1
@@ -73,10 +96,51 @@ pipeline {
                 fi
               done
             '''
-          }
-        }
-      }
-    } 
+          } // end withCredentials
+        } // end script
+      } // end steps
+    } // end stage
+
+
+
+
+
+    // stage('Upload to Nexus') {
+    //   steps{
+    //     script{
+    //       def artifactFile = "artifacts/phpapp-${params.ARTIFACT_VERSION}.zip"
+    //       def nexusUploadUrl = "${NEXUS_URL}/${NEXUS_REPO_PATH}/${params.ARTIFACT_VERSION}/phpapp-${params.ARTIFACT_VERSION}.zip"
+    //       echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
+        
+    //       withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
+    //         sh '''#!/bin/bash
+    //           set -euo pipefail
+    //           RETRIES=3
+    //           SLEEP=3
+    //           for i in \$(seq 1 \$RETRIES); do
+    //             echo \"Attempt \$i: uploading to Nexus...\"
+    //             HTTP_CODE=\$(curl -sS -u \"${NEXUS_USER}:${NEXUS_PSW}\" -w '%{http_code}' --upload-file ${artifactFile} "${nexusUploadUrl}" -o /dev/null || echo "000")
+    //             echo "HTTP_CODE=\$HTTP_CODE"
+    //             if [ "\$HTTP_CODE" = "201" ] || [ "\$HTTP_CODE" = "200" ]; then
+    //               echo "Upload successful (HTTP \$HTTP_CODE)"
+    //               break
+    //             else
+    //               echo "Upload attempt \$i failed with HTTP \$HTTP_CODE"
+    //               if [ \$i -lt \$RETRIES ]; then
+    //                 echo "Retrying in \$SLEEP seconds..."
+    //                 sleep \$SLEEP
+    //               else
+    //                 echo "All upload attempts failed."
+    //                 exit 1
+    //               fi
+    //             fi
+    //           done
+    //         '''
+    //       }
+    //     }
+    //   }
+    // } 
+
           // Upload to S3 (optional) - retained for reference
           //withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds-id']]) {
             // Uncomment if you want to upload to S3 as well
