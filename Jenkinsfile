@@ -54,29 +54,31 @@ pipeline {
           echo "Uploading ${artifactFile} to Nexus at ${nexusUploadUrl}"
 
           // Try upload with curl and simple retry logic
-          sh """
-            set -euo pipefail
-            RETRIES=3
-            SLEEP=3
-            for i in \$(seq 1 \$RETRIES); do
-              echo \"Attempt \$i: uploading to Nexus...\"
-              HTTP_CODE=\$(curl -sS -u \"${NEXUS_CRED_USR}:${NEXUS_CRED_PSW}\" -w '%{http_code}' --upload-file ${artifactFile} "${nexusUploadUrl}" -o /dev/null || echo "000")
-              echo "HTTP_CODE=\$HTTP_CODE"
-              if [ "\$HTTP_CODE" = "201" ] || [ "\$HTTP_CODE" = "200" ]; then
-                echo "Upload successful (HTTP \$HTTP_CODE)"
-                break
-              else
-                echo "Upload attempt \$i failed with HTTP \$HTTP_CODE"
-                if [ \$i -lt \$RETRIES ]; then
-                  echo "Retrying in \$SLEEP seconds..."
-                  sleep \$SLEEP
+          withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
+            sh '''#!/bin/bash
+              set -euo pipefail
+              RETRIES=3
+              SLEEP=3
+              for i in \$(seq 1 \$RETRIES); do
+                echo \"Attempt \$i: uploading to Nexus...\"
+                HTTP_CODE=\$(curl -sS -u \"${NEXUS_CRED_USR}:${NEXUS_CRED_PSW}\" -w '%{http_code}' --upload-file ${artifactFile} "${nexusUploadUrl}" -o /dev/null || echo "000")
+                echo "HTTP_CODE=\$HTTP_CODE"
+                if [ "\$HTTP_CODE" = "201" ] || [ "\$HTTP_CODE" = "200" ]; then
+                  echo "Upload successful (HTTP \$HTTP_CODE)"
+                  break
                 else
-                  echo "All upload attempts failed."
-                  exit 1
+                  echo "Upload attempt \$i failed with HTTP \$HTTP_CODE"
+                  if [ \$i -lt \$RETRIES ]; then
+                    echo "Retrying in \$SLEEP seconds..."
+                    sleep \$SLEEP
+                  else
+                    echo "All upload attempts failed."
+                    exit 1
+                  fi
                 fi
-              fi
-            done
-          """
+              done
+            '''
+          }
         }
       }
     }
@@ -91,7 +93,7 @@ pipeline {
 
           // Use username/password credential to download
           withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
-            sh """
+            sh '''#!/bin/bash
               set -euo pipefail
               mkdir -p artifacts
               RETRIES=3
@@ -114,7 +116,7 @@ pipeline {
                   fi
                 fi
               done
-            """
+            '''
           }
         }
       }
