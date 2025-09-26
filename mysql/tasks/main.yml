@@ -1,6 +1,5 @@
 ---
 # tasks file for mysql
----
 - name: Install MariaDB
   apt:
     name:

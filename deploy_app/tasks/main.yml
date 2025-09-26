@@ -1,6 +1,5 @@
 ---
 # tasks file for deploy_app
----
 - name: Ensure web root exists
   file:
     path: /var/www/html
