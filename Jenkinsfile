@@ -303,6 +303,7 @@ pipeline {
             export ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i ${INVENTORY} ${ANSIBLE_PLAYBOOK} -e target_group=${DEPLOY_ENV} \
                -e mysql_root_password=${MYSQL_ROOT_PW} \
+               --private-key "$SSH_KEY" -u "$SSH_USER" \
                -e mysql_app_password='app_password_here' \
                -e artifact_path=${WORKSPACE}/artifacts/phpapp-${ARTIFACT_VERSION}.zip
           '''
