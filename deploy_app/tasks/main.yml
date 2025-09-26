@@ -1,5 +1,17 @@
 ---
 # tasks file for deploy_app
+- name: Ensure archive tools are present
+  apt:
+    name:
+      - unzip
+      - bzip2
+      - xz-utils
+      - zstd
+      - zip
+    state: present
+    update_cache: yes
+  become: yes
+
 - name: Ensure web root exists
   file:
     path: /var/www/html
