@@ -298,7 +298,7 @@ pipeline {
       }
       steps {
         // Run Ansible to deploy to staging (if DEPLOY_ENV==staging) or production (for manual promotion)
-        withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY')]) {
+        withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
           sh '''
             export ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i ${INVENTORY} ${ANSIBLE_PLAYBOOK} -e target_group=${DEPLOY_ENV} \
