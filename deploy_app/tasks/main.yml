@@ -25,7 +25,7 @@
   unarchive:
     src: "{{ artifact_path }}"
     dest: /var/www/html/
-    remote_src: yes
+    remote_src: false
   notify: Restart Apache
 
 - name: Fallback index.php
