@@ -259,7 +259,7 @@ pipeline {
 
     stage('Package') {
       steps {
-        sh '''
+        sh '''#!/bin/bash
           set -euo pipefail
           # ensure the artifacts folder exists
           mkdir -p artifacts
