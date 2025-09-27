@@ -2,7 +2,7 @@ pipeline {
   agent { label 'ansible-agent' }  // ensure this agent has ansible & curl installed
   parameters {
     string(name: 'ARTIFACT_VERSION', defaultValue: '1.0.0', description: 'Artifact version to build/deploy')
-    choice(name: 'DEPLOY_ENV', choices: ['staging','production'], description: 'Target environment for deploy')
+    //choice(name: 'DEPLOY_ENV', choices: ['staging','production'], description: 'Target environment for deploy')
   }
   environment {
     INVENTORY = "hosts.ini"
@@ -12,7 +12,7 @@ pipeline {
     // Nexus credentials: must be configured in Jenkins as "Username with password" type
     NEXUS_CRED = credentials('nexus-user-id')        // provides NEXUS_CRED_USR and NEXUS_CRED_PSW
     // Nexus base URL (no trailing slash), and repository path where uploads should go:
-    NEXUS_URL = "http://63.179.246.64:8081/nexus/content"
+    NEXUS_URL = "http://3.124.184.40:8081/nexus/content"
     NEXUS_REPO_PATH = "repositories/releases/php-crud-app"   // e.g. repository/releases/<repoName>
     //AWS_CREDENTIALS = credentials('aws-creds-id')    // if using S3 (optional)
   }
