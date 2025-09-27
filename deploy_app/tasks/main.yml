@@ -122,25 +122,6 @@
     state: absent
   become: yes
 
-
-- name: Deploy artifact
-  when: artifact_path is defined and artifact_path != ''
-  unarchive:
-    src: "{{ artifact_path }}"
-    dest: /var/www/html/
-    remote_src: false
-  notify: Restart Apache
-
-- name: Fallback index.php
-  when: artifact_path is not defined or artifact_path == ''
-  copy:
-    src: files/index.php
-    dest: /var/www/html/index.php
-    owner: www-data
-    group: www-data
-    mode: '0644'
-  notify: Restart Apache
-
 ...
 
 

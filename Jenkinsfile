@@ -305,7 +305,9 @@ pipeline {
                -e mysql_root_password=${MYSQL_ROOT_PW} \
                --private-key "$SSH_KEY" -u "$SSH_USER" \
                -e mysql_app_password='app_password_here' \
-               -e artifact_path=${WORKSPACE}/artifacts/phpapp-${ARTIFACT_VERSION}.zip
+               -e artifact_path=${WORKSPACE}/artifacts/phpapp-${ARTIFACT_VERSION}.zip \
+               -e artifact_version=${ARTIFACT_VERSION}
+
           '''
         }
       }
@@ -332,7 +334,8 @@ pipeline {
             ansible-playbook -i ${INVENTORY} ${ANSIBLE_PLAYBOOK} -e target_group=production \
                -e mysql_root_password=${MYSQL_ROOT_PW} \
                -e mysql_app_password='app_password_here' \
-               -e artifact_path=${WORKSPACE}/artifacts/phpapp-${ARTIFACT_VERSION}.zip
+               -e artifact_path=${WORKSPACE}/artifacts/phpapp-${ARTIFACT_VERSION}.zip \
+               -e artifact_version=${ARTIFACT_VERSION}
           '''
         }
       }
