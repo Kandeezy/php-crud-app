@@ -21,7 +21,7 @@
     mode: '0755'
 
 - name: Deploy artifact
-  when: artifact_path is not defined and artifact_path == ''
+  when: artifact_path is defined and artifact_path != ''
   unarchive:
     src: "{{ artifact_path }}"
     dest: /var/www/html/
@@ -29,7 +29,7 @@
   notify: Restart Apache
 
 - name: Fallback index.php
-  when: artifact_path is defined or artifact_path != ''
+  when: artifact_path is not defined or artifact_path == ''
   copy:
     src: files/index.php
     dest: /var/www/html/index.php
