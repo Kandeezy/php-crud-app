@@ -37,9 +37,9 @@ pipeline {
       steps {
         script {
           // Create a zip artifact
-          //sh "mkdir -p artifacts && zip -r artifacts/phpapp-${params.ARTIFACT_VERSION}.zip deploy_app/files/*"
+          sh "mkdir -p artifacts && zip -r artifacts/phpapp-${params.ARTIFACT_VERSION}.zip deploy_app/files/*"
           
-          sh "mkdir -p artifacts && cd deploy_app/files && zip -r artifacts/phpapp-${params.ARTIFACT_VERSION}.zip "
+          //sh "mkdir -p artifacts && cd deploy_app/files && zip -r artifacts/phpapp-${params.ARTIFACT_VERSION}.zip "
         }
       }
     }
