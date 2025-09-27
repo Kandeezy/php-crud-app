@@ -72,7 +72,7 @@
   unarchive:
     src: "{{ artifact_path }}"
     dest: /tmp/phpapp_extract
-    remote_src: yes
+    remote_src: false
   become: yes
 
 - name: Move extracted contents into webroot (strip top-level dir if present)
