@@ -2,7 +2,7 @@ pipeline {
   agent { label 'ansible-agent' }  // ensure this agent has ansible & curl installed
   parameters {
     string(name: 'ARTIFACT_VERSION', defaultValue: '1.0.0', description: 'Artifact version to deploy')
-    //choice(name: 'DEPLOY_ENV', choices: ['staging','production'], description: 'Target environment for deploy')
+    choice(name: 'DEPLOY_ENV', choices: ['staging','production'], description: 'Target environment for deploy')
   }
   environment {
     INVENTORY = "hosts.ini"
