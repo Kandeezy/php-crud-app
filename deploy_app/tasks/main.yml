@@ -1,5 +1,5 @@
-# ---
-# # tasks file for deploy_app
+---
+# tasks file for deploy_app
 # - name: Ensure archive tools are present
 #   apt:
 #     name:
@@ -42,7 +42,6 @@
 
 
 
-tasks file for deploy_app
 - name: Ensure archive tools are present
   apt:
     name:
@@ -94,6 +93,7 @@ tasks file for deploy_app
     state: absent
   become: yes
 
+...
 
 
 
