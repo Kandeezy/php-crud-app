@@ -42,8 +42,6 @@
 
 
 
----
-
 - name: Ensure required packages are installed (Ubuntu)
   apt:
     name:
