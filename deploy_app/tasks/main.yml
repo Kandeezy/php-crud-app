@@ -23,9 +23,9 @@
 - name: Deploy artifact
   when: artifact_path is defined and artifact_path != ''
   unarchive:
-    src: "/{{ artifact_path }}/files"
+    src: "{{ artifact_path }}"
     dest: /var/www/html/
-    remote_src: false
+    remote_src: yes
   notify: Restart Apache
 
 - name: Fallback index.php
