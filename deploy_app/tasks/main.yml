@@ -87,18 +87,25 @@
 
 - name: Move extracted contents into webroot (strip top-level dir if present)
   shell: |
-    set -e
-    # if there's a single directory inside tmp extract, move its contents; else move all contents
-    cd /tmp/phpapp_extract
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    cd /tmp/phpapp_extract || { echo "extract dir missing"; exit 1; }
+
+    # Get list of entries (directories/files) in the extract dir
     entries=(*/)
-    if [ "${entries[0]}" != "" ] && [ $(ls -1 | wc -l) -eq 1 ] && [ -d "${entries[0]}" ]; then
+    # If there is exactly one entry and it is a directory, move its contents
+    if [[ -n "${entries[0]:-}" ]] && [[ $(ls -1 | wc -l) -eq 1 ]] && [[ -d "${entries[0]}" ]]; then
+      echo "Single top-level directory found: ${entries[0]}; moving its contents to /var/www/html"
       mv "${entries[0]}"* /var/www/html/
     else
-      mv * /var/www/html/
+      echo "Moving all extracted contents to /var/www/html"
+      mv -- * /var/www/html/
     fi
   args:
     executable: /bin/bash
   become: yes
+
 
 - name: Ensure ownership and permissions on webroot
   file:
