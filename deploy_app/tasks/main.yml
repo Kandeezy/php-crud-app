@@ -1,47 +1,3 @@
----
-# tasks file for deploy_app
-- name: Ensure archive tools are present
-  apt:
-    name:
-      - unzip
-      - bzip2
-      - xz-utils
-      - zstd
-      - zip
-    state: present
-    update_cache: yes
-  become: yes
-
-- name: Ensure web root exists
-  file:
-    path: /var/www/html
-    state: directory
-    owner: www-data
-    group: www-data
-    mode: '0755'
-
-- name: Deploy artifact
-  when: artifact_path is defined and artifact_path != ''
-  unarchive:
-    src: "{{ artifact_path }}"
-    dest: /var/www/html/
-    remote_src: yes
-  notify: Restart Apache
-
-- name: Fallback index.php
-  when: artifact_path is not defined or artifact_path == ''
-  copy:
-    src: files/index.php
-    dest: /var/www/html/index.php
-    owner: www-data
-    group: www-data
-    mode: '0644'
-  notify: Restart Apache
-
-...
-
-
-
 # ---
 # # tasks file for deploy_app
 # - name: Ensure archive tools are present
@@ -64,65 +20,80 @@
 #     group: www-data
 #     mode: '0755'
 
-# - name: Copy artifact to remote /tmp
-#   copy:
-#     src: "{{ artifact_path }}"         # path: artifacts/phpapp-1.0.0.zip
-#     dest: "/tmp/phpapp-{{ artifact_version }}.zip"
-#     mode: '0644'
-#   become: yes
-
-# - name: Create temporary extract dir
-#   file:
-#     path: /tmp/phpapp_extract
-#     state: directory
-#     mode: '0755'
-#   become: yes
-
-# - name: Unzip artifact into temporary dir
+# - name: Deploy artifact
+#   when: artifact_path is defined and artifact_path != ''
 #   unarchive:
-#     src: "/tmp/phpapp-{{ artifact_version }}.zip"
-#     dest: /tmp/phpapp_extract
+#     src: "{{ artifact_path }}"
+#     dest: /var/www/html/
 #     remote_src: yes
-#   become: yes
+#   notify: Restart Apache
 
-# - name: Move extracted contents into webroot (strip top-level dir if present)
-#   shell: |
-#     #!/usr/bin/env bash
-#     set -euo pipefail
-
-#     cd /tmp/phpapp_extract || { echo "extract dir missing"; exit 1; }
-
-#     # Get list of entries (directories/files) in the extract dir
-#     entries=(*/)
-#     # If there is exactly one entry and it is a directory, move its contents
-#     if [[ -n "${entries[0]:-}" ]] && [[ $(ls -1 | wc -l) -eq 1 ]] && [[ -d "${entries[0]}" ]]; then
-#       echo "Single top-level directory found: ${entries[0]}; moving its contents to /var/www/html"
-#       mv "${entries[0]}"* /var/www/html/
-#     else
-#       echo "Moving all extracted contents to /var/www/html"
-#       mv -- * /var/www/html/
-#     fi
-#   args:
-#     executable: /bin/bash
-#   become: yes
-
-
-# - name: Ensure ownership and permissions on webroot
-#   file:
-#     path: /var/www/html
-#     recurse: yes
+# - name: Fallback index.php
+#   when: artifact_path is not defined or artifact_path == ''
+#   copy:
+#     src: files/index.php
+#     dest: /var/www/html/index.php
 #     owner: www-data
 #     group: www-data
 #     mode: '0644'
-#   become: yes
-
-# - name: Remove temporary files
-#   file:
-#     path: /tmp/phpapp_extract
-#     state: absent
-#   become: yes
+#   notify: Restart Apache
 
 # ...
+
+
+
+tasks file for deploy_app
+- name: Ensure archive tools are present
+  apt:
+    name:
+      - unzip
+      - bzip2
+      - xz-utils
+      - zstd
+      - zip
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Ensure web root exists
+  file:
+    path: /var/www/html
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Create temp extract dir
+  file:
+    path: /tmp/phpapp_extract
+    state: directory
+  become: yes
+
+- name: Unarchive into temp dir
+  unarchive:
+    src: "{{ artifact_path }}"
+    dest: /tmp/phpapp_extract
+    remote_src: yes
+  become: yes
+
+- name: Move extracted contents into webroot (strip top-level dir if present)
+  shell: |
+    shopt -s dotglob
+    if [ -d /tmp/phpapp_extract/deploy_app/files ]; then
+      mv /tmp/phpapp_extract/deploy_app/files/* /var/www/html/
+    else
+      mv /tmp/phpapp_extract/* /var/www/html/
+    fi
+  args:
+    executable: /bin/bash
+  become: yes
+
+- name: Clean up temp extract dir
+  file:
+    path: /tmp/phpapp_extract
+    state: absent
+  become: yes
+
 
 
 
