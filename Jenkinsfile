@@ -303,7 +303,7 @@ pipeline {
         withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
           sh '''
             export ANSIBLE_HOST_KEY_CHECKING=False
-            ansible-playbook -i ${INVENTORY} ${ANSIBLE_PLAYBOOK} -e target_group=${DEPLOY_ENV} \
+            ansible-playbook -i ${INVENTORY} ${ANSIBLE_PLAYBOOK} -e target_group=staging \
                -e mysql_root_password=${MYSQL_ROOT_PW} \
                --private-key "$SSH_KEY" -u "$SSH_USER" \
                -e mysql_app_password='app_password_here' \
