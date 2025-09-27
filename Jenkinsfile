@@ -275,7 +275,7 @@ pipeline {
 
     stage('Upload to Nexus') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
+        withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
           sh '''#!/usr/bin/env bash
 set -euo pipefail
 echo "Uploading ${ARTIFACT_PATH} to ${NEXUS_UPLOAD_URL}"
