@@ -1,47 +1,5 @@
 ---
 # tasks file for deploy_app
-# - name: Ensure archive tools are present
-#   apt:
-#     name:
-#       - unzip
-#       - bzip2
-#       - xz-utils
-#       - zstd
-#       - zip
-#     state: present
-#     update_cache: yes
-#   become: yes
-
-# - name: Ensure web root exists
-#   file:
-#     path: /var/www/html
-#     state: directory
-#     owner: www-data
-#     group: www-data
-#     mode: '0755'
-
-# - name: Deploy artifact
-#   when: artifact_path is defined and artifact_path != ''
-#   unarchive:
-#     src: "{{ artifact_path }}"
-#     dest: /var/www/html/
-#     remote_src: yes
-#   notify: Restart Apache
-
-# - name: Fallback index.php
-#   when: artifact_path is not defined or artifact_path == ''
-#   copy:
-#     src: files/index.php
-#     dest: /var/www/html/index.php
-#     owner: www-data
-#     group: www-data
-#     mode: '0644'
-#   notify: Restart Apache
-
-# ...
-
-
-
 - name: Ensure archive tools are present
   apt:
     name:
@@ -62,38 +20,84 @@
     group: www-data
     mode: '0755'
 
-- name: Create temp extract dir
-  file:
-    path: /tmp/phpapp_extract
-    state: directory
-  become: yes
-
-- name: Unarchive into temp dir
+- name: Deploy artifact
+  when: artifact_path is defined and artifact_path != ''
   unarchive:
     src: "{{ artifact_path }}"
-    dest: /tmp/phpapp_extract
-    remote_src: false
-  become: yes
+    dest: /var/www/html/
+    remote_src: yes
+  notify: Restart Apache
 
-- name: Move extracted contents into webroot (strip top-level dir if present)
-  shell: |
-    shopt -s dotglob
-    if [ -d /tmp/phpapp_extract/deploy_app/files ]; then
-      mv /tmp/phpapp_extract/deploy_app/files/* /var/www/html/
-    else
-      mv /tmp/phpapp_extract/* /var/www/html/
-    fi
-  args:
-    executable: /bin/bash
-  become: yes
+- name: Fallback index.php
+  when: artifact_path is not defined or artifact_path == ''
+  copy:
+    src: files/index.php
+    dest: /var/www/html/index.php
+    owner: www-data
+    group: www-data
+    mode: '0644'
+  notify: Restart Apache
 
-- name: Clean up temp extract dir
-  file:
-    path: /tmp/phpapp_extract
-    state: absent
-  become: yes
 
-...
+
+
+
+
+
+
+# - name: Ensure archive tools are present
+#   apt:
+#     name:
+#       - unzip
+#       - bzip2
+#       - xz-utils
+#       - zstd
+#       - zip
+#     state: present
+#     update_cache: yes
+#   become: yes
+
+# - name: Ensure web root exists
+#   file:
+#     path: /var/www/html
+#     state: directory
+#     owner: www-data
+#     group: www-data
+#     mode: '0755'
+
+# - name: Create temp extract dir
+#   file:
+#     path: /tmp/phpapp_extract
+#     state: directory
+#   become: yes
+
+# - name: Unarchive into temp dir
+#   unarchive:
+#     src: "{{ artifact_path }}"
+#     dest: /tmp/phpapp_extract
+#     remote_src: false
+#   become: yes
+
+# - name: Move extracted contents into webroot (strip top-level dir if present)
+#   shell: |
+#     shopt -s dotglob
+#     if [ -d /tmp/phpapp_extract/deploy_app/files ]; then
+#       mv /tmp/phpapp_extract/deploy_app/files/* /var/www/html/
+#     else
+#       mv /tmp/phpapp_extract/* /var/www/html/
+#     fi
+#   args:
+#     executable: /bin/bash
+#   become: yes
+
+# - name: Clean up temp extract dir
+#   file:
+#     path: /tmp/phpapp_extract
+#     state: absent
+#   become: yes
+
+
+
 
 
 
@@ -150,3 +154,5 @@
 #     path: /tmp/phpapp_extract
 #     state: absent
 #   become: yes
+
+...
