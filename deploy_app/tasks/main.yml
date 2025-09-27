@@ -1,49 +1,5 @@
 ---
 # tasks file for deploy_app
-- name: Ensure archive tools are present
-  apt:
-    name:
-      - unzip
-      - bzip2
-      - xz-utils
-      - zstd
-      - zip
-    state: present
-    update_cache: yes
-  become: yes
-
-- name: Ensure web root exists
-  file:
-    path: /var/www/html
-    state: directory
-    owner: www-data
-    group: www-data
-    mode: '0755'
-
-- name: Deploy artifact
-  when: artifact_path is defined and artifact_path != ''
-  unarchive:
-    src: "{{ artifact_path }}"
-    dest: /var/www/html/
-    remote_src: false
-  notify: Restart Apache
-
-- name: Fallback index.php
-  when: artifact_path is not defined or artifact_path == ''
-  copy:
-    src: files/index.php
-    dest: /var/www/html/index.php
-    owner: www-data
-    group: www-data
-    mode: '0644'
-  notify: Restart Apache
-
-
-
-
-
-
-
 # - name: Ensure archive tools are present
 #   apt:
 #     name:
@@ -64,94 +20,125 @@
 #     group: www-data
 #     mode: '0755'
 
-# - name: Create temp extract dir
-#   file:
-#     path: /tmp/phpapp_extract
-#     state: directory
-#   become: yes
-
-# - name: Unarchive into temp dir
+# - name: Deploy artifact
+#   when: artifact_path is defined and artifact_path != ''
 #   unarchive:
 #     src: "{{ artifact_path }}"
-#     dest: /tmp/phpapp_extract
+#     dest: /var/www/html/
 #     remote_src: false
-#   become: yes
+#   notify: Restart Apache
 
-# - name: Move extracted contents into webroot (strip top-level dir if present)
-#   shell: |
-#     shopt -s dotglob
-#     if [ -d /tmp/phpapp_extract/deploy_app/files ]; then
-#       mv /tmp/phpapp_extract/deploy_app/files/* /var/www/html/
-#     else
-#       mv /tmp/phpapp_extract/* /var/www/html/
-#     fi
-#   args:
-#     executable: /bin/bash
-#   become: yes
-
-# - name: Clean up temp extract dir
-#   file:
-#     path: /tmp/phpapp_extract
-#     state: absent
-#   become: yes
-
-
-
-
-
-
-
-
-
-# - name: Copy artifact to remote /tmp
+# - name: Fallback index.php
+#   when: artifact_path is not defined or artifact_path == ''
 #   copy:
-#     src: "{{ artifact_path }}"         # controller path: artifacts/phpapp-1.0.0.zip
-#     dest: "/tmp/phpapp-{{ artifact_version }}.zip"
-#     mode: '0644'
-#   become: yes
-
-# - name: Create temporary extract dir
-#   file:
-#     path: /tmp/phpapp_extract
-#     state: directory
-#     mode: '0755'
-#   become: yes
-
-# - name: Unzip artifact into temporary dir
-#   unarchive:
-#     src: "/tmp/phpapp-{{ artifact_version }}.zip"
-#     dest: /tmp/phpapp_extract
-#     remote_src: yes
-#   become: yes
-
-# - name: Move extracted contents into webroot (strip top-level dir if present)
-#   shell: |
-#     set -e
-#     # if there's a single directory inside tmp extract, move its contents; else move all contents
-#     cd /tmp/phpapp_extract
-#     entries=(*/)
-#     if [ "${entries[0]}" != "" ] && [ $(ls -1 | wc -l) -eq 1 ] && [ -d "${entries[0]}" ]; then
-#       mv "${entries[0]}"* /var/www/html/
-#     else
-#       mv * /var/www/html/
-#     fi
-#   args:
-#     executable: /bin/bash
-#   become: yes
-
-# - name: Ensure ownership and permissions on webroot
-#   file:
-#     path: /var/www/html
-#     recurse: yes
+#     src: files/index.php
+#     dest: /var/www/html/index.php
 #     owner: www-data
 #     group: www-data
 #     mode: '0644'
-#   become: yes
+#   notify: Restart Apache
 
-# - name: Remove temporary files
-#   file:
-#     path: /tmp/phpapp_extract
-#     state: absent
-#   become: yes
+
+
+
+
+---
+
+- name: Ensure required packages are installed (Ubuntu)
+  apt:
+    name:
+      - unzip
+      - zip
+      - php
+      - libapache2-mod-php
+    state: present
+    update_cache: yes
+
+- name: Show vars for debugging
+  debug:
+    msg:
+      - "artifact_url={{ artifact_url | default('UNSET') }}"
+      - "artifact_version={{ artifact_version }}"
+
+- name: Download artifact from Nexus to remote /tmp
+  get_url:
+    url: "{{ artifact_url }}"
+    dest: "{{ tmp_zip }}"
+    mode: '0644'
+  register: dl
+  until: dl is succeeded
+  retries: 3
+  delay: 5
+
+- name: Ensure temp extract dir exists
+  file:
+    path: "{{ tmp_extract }}"
+    state: directory
+    mode: '0755'
+
+- name: Unarchive into tmp extract dir
+  unarchive:
+    src: "{{ tmp_zip }}"
+    dest: "{{ tmp_extract }}"
+    remote_src: yes
+
+- name: Move extracted contents into webroot (strip top-level dir if present)
+  shell: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ tmp_extract }}"
+    shopt -s dotglob nullglob
+    # If single directory exists, move its contents; otherwise move all items
+    entries=(*/)
+    if [[ -d "${entries[0]:-}" ]] && [[ $(ls -1 | wc -l) -eq 1 ]]; then
+      mv "${entries[0]}"* "{{ web_root }}/"
+    else
+      mv -- * "{{ web_root }}/"
+    fi
+  args:
+    executable: /bin/bash
+
+- name: Ensure ownership and permissions on webroot
+  file:
+    path: "{{ web_root }}"
+    recurse: yes
+    owner: www-data
+    group: www-data
+    mode: '0644'
+
+- name: Ensure directories have executable bit
+  find:
+    paths: "{{ web_root }}"
+    file_type: directory
+  register: web_dirs
+
+- name: Set 0755 for directories
+  file:
+    path: "{{ item.path }}"
+    mode: '0755'
+  loop: "{{ web_dirs.files }}"
+  when: web_dirs.matched > 0
+
+- name: Remove default index.html if present
+  file:
+    path: "{{ web_root }}/index.html"
+    state: absent
+
+- name: Restart Apache (Ubuntu)
+  service:
+    name: apache2
+    state: restarted
+
+- name: Clean up tmp files
+  file:
+    path: "{{ tmp_extract }}"
+    state: absent
+
+- name: Remove downloaded zip
+  file:
+    path: "{{ tmp_zip }}"
+    state: absent
+
+
 
 ...
