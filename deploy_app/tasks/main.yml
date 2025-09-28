@@ -79,15 +79,15 @@
     remote_src: yes
   notify: Restart Apache
 
-  - name: Remove default index.html if present
-    file:
-      path: "/var/www/html/index.html"
-      state: absent
+- name: Remove default index.html if present
+  file:
+    path: "/var/www/html/index.html"
+    state: absent
 
-  - name: Restart Apache
-    service:
-      name: apache2
-      state: restarted
+- name: Restart Apache
+  service:
+    name: apache2
+    state: restarted
 
 # - name: Fallback index.php
 #   when: artifact_path is not defined or artifact_path == ''
