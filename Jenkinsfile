@@ -345,9 +345,9 @@ pipeline {
               echo "Artifact exists. Proceeding to deploy..."
               '''
           }
-
-
-
+        }
+      }
+    }
 
     stage('Deploy via Ansible to Staging') {
       steps {
