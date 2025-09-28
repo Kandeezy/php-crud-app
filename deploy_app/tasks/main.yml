@@ -75,7 +75,7 @@
   #when: artifact_path is defined and artifact_path != ''
   unarchive:
     src: "/tmp/php-crud-app-{{ artifact_version }}.zip"
-    dest: /var/www/html/
+    dest: /var/www/html/index.php
     remote_src: yes
   notify: Restart Apache
 
