@@ -60,15 +60,40 @@
 - name: Debug vars
   debug: msg="artifact_url={{ artifact_url }}, artifact_version={{ artifact_version }}"
 
-- name: Download artifact from Nexus to remote /tmp
+#- name: Download artifact from Nexus to remote /tmp
+  #get_url:
+    #url: "{{ artifact_url }}"
+    #dest: "{{ tmp_zip }}"
+    #mode: '0644'
+  #register: dl
+  #until: dl is succeeded
+  #retries: 3
+  #delay: 5
+
+- name: Download artifact from Nexus (with retries)
   get_url:
     url: "{{ artifact_url }}"
     dest: "{{ tmp_zip }}"
     mode: '0644'
+    url_username: "{{ nexus_user | default(lookup('env','NEXUS_USER')) }}"
+    url_password: "{{ nexus_pass | default(lookup('env','NEXUS_PSW')) }}"
+    force: yes
   register: dl
-  until: dl is succeeded
   retries: 3
   delay: 5
+  until: dl is succeeded
+
+- name: Verify zip file looks like a zip
+  command: file "{{ tmp_zip }}"
+  register: fileinfo
+  changed_when: false
+
+- name: Fail if remote file is not a zip
+  fail:
+    msg: "Downloaded file is not a zip: {{ fileinfo.stdout }}"
+  when: fileinfo.stdout is not search('Zip archive data')
+
+
 
 - name: Ensure tmp extract dir exists
   file:
