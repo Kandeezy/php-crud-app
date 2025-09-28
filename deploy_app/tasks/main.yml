@@ -74,7 +74,7 @@
 - name: Unarchive artifact
   #when: artifact_path is defined and artifact_path != ''
   unarchive:
-    src: "/tmp/php-crud-app-{{ artifact_path }}.zip"
+    src: "/tmp/php-crud-app-{{ artifact_version }}.zip"
     dest: /var/www/html/
     remote_src: yes
   notify: Restart Apache
