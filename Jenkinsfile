@@ -252,7 +252,6 @@ pipeline {
       // Nexus base URL (no trailing slash), and repository path where uploads should go:
       NEXUS_URL = "http://3.123.189.95:8081/nexus/content"
       NEXUS_REPO = "repositories/releases/php-crud-app"   // e.g. repository/releases/<repoName>
-      DEPLOY_VERSION = "1"
   }
 
   stages {
@@ -317,6 +316,39 @@ pipeline {
     }
 
 
+
+    stage('Assign Version to Deploy') { 
+      steps {
+        script {
+          // Prompt user for the version to promote (manual input)
+          def userInput = input(
+            message: 'Enter the artifact version to deploy',
+            parameters: [string(name: 'VERSION_NUMBER', defaultValue: "${env.VERSION ?: ''}", description: 'Artifact version (e.g. 42)')],
+            ok: 'Promote'
+          )
+          env.VERSION_NUMBER = userInput['VERSION_NUMBER'].trim()
+          echo "Version to deploy: ${env.VERSION_NUMBER}"
+
+          // Optional sanity: verify artifact exists in Nexus using nexus creds
+          withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
+            sh '''#!/usr/bin/env bash
+              set -euo pipefail
+              ART="${env.VERSION_NUMBER}"
+              ART_NAME="phpapp-${PROMOTE_VERSION}.zip"
+              ART_URL="${NEXUS_URL}/${NEXUS_REPO}/${VERSION_NUMBER}/${APP_NAME}"
+              echo "Checking Nexus artifact: ${ART_URL}"
+              HTTP=$(curl -s -o /dev/null -w '%{http_code}' -u "${NEXUS_USER}:${NEXUS_PSW}" "${ART_URL}" || echo "000")
+              if [[ "$HTTP" != "200" && "$HTTP" != "201" ]]; then
+                echo "Artifact ${ART_URL} not found (HTTP $HTTP). Aborting."
+                exit 2
+              fi
+              echo "Artifact exists. Proceeding to deploy..."
+              '''
+          }
+
+
+
+
     stage('Deploy via Ansible to Staging') {
       steps {
         withCredentials([sshUserPrivateKey(credentialsId: 'jenkins-ssh-key-id', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
@@ -325,8 +357,8 @@ pipeline {
             ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
-              -e "artifact_version=${env.DEPLOY_VERSION}" \
-              -e "artifact_url=${NEXUS_DOWNLOAD_URL}" \
+              -e "artifact_version=${VERSION_NUMBER}" \
+              -e "artifact_url=${ART_URL}" \
               -e "target_group=staging"
             '''
         }
@@ -347,8 +379,8 @@ pipeline {
             ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
-              -e "artifact_version=${env.DEPLOY_VERSION}" \
-              -e "artifact_url=${NEXUS_DOWNLOAD_URL}" \
+              -e "artifact_version=${VERSION_NUMBER}" \
+              -e "artifact_url=${ART_URL}" \
               -e "target_group=production"
             '''
         }
