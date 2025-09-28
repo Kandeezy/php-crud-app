@@ -309,7 +309,6 @@ pipeline {
             fi
             echo "Uploading ${ARTIFACT_PATH} -> ${NEXUS_UPLOAD_URL}"
             curl --fail -S -u "${NEXUS_USER}:${NEXUS_PSW}" -T "${WORKSPACE}/${ARTIFACT_PATH}" "${NEXUS_UPLOAD_URL}"
-            HTTP_CODE=$(curl -sS -u "${NEXUS_USER}:${NEXUS_PSW}" -w '%{http_code}' --upload-file "${ARTIFACT_FILE}" "${NEXUS_UPLOAD_URL}" -o /dev/null || echo "000")
             echo "Artifact Uploaded To Nexus."
             '''
         }
