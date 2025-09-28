@@ -365,7 +365,7 @@ pipeline {
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
               -e "artifact_version=$VERSION_NUMBER" \
-              -e "artifact_url=${ART_URL}" \
+              -e "artifact_url=$ART_URL" \
               -e "target_group=staging"
             '''
         }
@@ -387,7 +387,7 @@ pipeline {
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
               -e "artifact_version=$VERSION_NUMBER" \
-              -e "artifact_url=${ART_URL}" \
+              -e "artifact_url=$ART_URL" \
               -e "target_group=production"
             '''
         }
