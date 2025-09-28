@@ -251,7 +251,7 @@ pipeline {
       NEXUS_CRED = credentials('nexus-user-id')        // provides NEXUS_CRED_USR and NEXUS_CRED_PSW
       // Nexus base URL (no trailing slash), and repository path where uploads should go:
       NEXUS_URL = "http://3.123.189.95:8081/nexus/content"
-      NEXUS_REPO_PATH = "repositories/releases/php-crud-app"   // e.g. repository/releases/<repoName>
+      NEXUS_REPO = "repositories/releases/php-crud-app"   // e.g. repository/releases/<repoName>
       DEPLOY_VERSION = "1"
   }
 
