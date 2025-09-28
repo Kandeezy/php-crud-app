@@ -1,141 +1,152 @@
 ---
 # tasks file for deploy_app
-- name: Ensure archive tools are present
-  apt:
-    name:
-      - unzip
-      - bzip2
-      - xz-utils
-      - zstd
-      - zip
-    state: present
-    update_cache: yes
-  become: yes
-
-- name: Ensure web root exists
-  file:
-    path: /var/www/html
-    state: directory
-    owner: www-data
-    group: www-data
-    mode: '0755'
-
-- name: Deploy artifact
-  when: artifact_path is defined and artifact_path != ''
-  unarchive:
-    src: "{{ artifact_path }}"
-    dest: /var/www/html/
-    remote_src: false
-  notify: Restart Apache
-
-- name: Fallback index.php
-  when: artifact_path is not defined or artifact_path == ''
-  copy:
-    src: files/index.php
-    dest: /var/www/html/index.php
-    owner: www-data
-    group: www-data
-    mode: '0644'
-  notify: Restart Apache
-
-
-
-
-
-# - name: Ensure required packages are installed (Ubuntu)
+# - name: Ensure archive tools are present
 #   apt:
 #     name:
 #       - unzip
+#       - bzip2
+#       - xz-utils
+#       - zstd
 #       - zip
-#       - php
-#       - libapache2-mod-php
 #     state: present
 #     update_cache: yes
+#   become: yes
 
-# - name: Show vars for debugging
-#   debug:
-#     msg:
-#       - "artifact_url={{ artifact_url | default('UNSET') }}"
-#       - "artifact_version={{ artifact_version }}"
-
-# - name: Download artifact from Nexus to remote /tmp
-#   get_url:
-#     url: "{{ artifact_url }}"
-#     dest: "{{ tmp_zip }}"
-#     mode: '0644'
-#   register: dl
-#   until: dl is succeeded
-#   retries: 3
-#   delay: 5
-
-# - name: Ensure temp extract dir exists
+# - name: Ensure web root exists
 #   file:
-#     path: "{{ tmp_extract }}"
+#     path: /var/www/html
 #     state: directory
+#     owner: www-data
+#     group: www-data
 #     mode: '0755'
 
-# - name: Unarchive into tmp extract dir
+# - name: Deploy artifact
+#   when: artifact_path is defined and artifact_path != ''
 #   unarchive:
-#     src: "{{ tmp_zip }}"
-#     dest: "{{ tmp_extract }}"
-#     remote_src: yes
+#     src: "{{ artifact_path }}"
+#     dest: /var/www/html/
+#     remote_src: false
+#   notify: Restart Apache
 
-# - name: Move extracted contents into webroot (strip top-level dir if present)
-#   shell: |
-#     #!/usr/bin/env bash
-#     set -euo pipefail
-#     cd "{{ tmp_extract }}"
-#     shopt -s dotglob nullglob
-#     # If single directory exists, move its contents; otherwise move all items
-#     entries=(*/)
-#     if [[ -d "${entries[0]:-}" ]] && [[ $(ls -1 | wc -l) -eq 1 ]]; then
-#       mv "${entries[0]}"* "{{ web_root }}/"
-#     else
-#       mv -- * "{{ web_root }}/"
-#     fi
-#   args:
-#     executable: /bin/bash
-
-# - name: Ensure ownership and permissions on webroot
-#   file:
-#     path: "{{ web_root }}"
-#     recurse: yes
+# - name: Fallback index.php
+#   when: artifact_path is not defined or artifact_path == ''
+#   copy:
+#     src: files/index.php
+#     dest: /var/www/html/index.php
 #     owner: www-data
 #     group: www-data
 #     mode: '0644'
+#   notify: Restart Apache
 
-# - name: Ensure directories have executable bit
-#   find:
-#     paths: "{{ web_root }}"
-#     file_type: directory
-#   register: web_dirs
 
-# - name: Set 0755 for directories
-#   file:
-#     path: "{{ item.path }}"
-#     mode: '0755'
-#   loop: "{{ web_dirs.files }}"
-#   when: web_dirs.matched > 0
 
-# - name: Remove default index.html if present
-#   file:
-#     path: "{{ web_root }}/index.html"
-#     state: absent
 
-# - name: Restart Apache (Ubuntu)
-#   service:
-#     name: apache2
-#     state: restarted
 
-# - name: Clean up tmp files
-#   file:
-#     path: "{{ tmp_extract }}"
-#     state: absent
 
-# - name: Remove downloaded zip
-#   file:
-#     path: "{{ tmp_zip }}"
-#     state: absent
+
+---
+- name: Ensure unzip/php packages present (Ubuntu)
+  apt:
+    name:
+      - unzip
+      - zip
+      - php
+      - libapache2-mod-php
+    state: present
+    update_cache: yes
+
+- name: Debug vars
+  debug: msg="artifact_url={{ artifact_url }}, artifact_version={{ artifact_version }}"
+
+- name: Download artifact from Nexus to remote /tmp
+  get_url:
+    url: "{{ artifact_url }}"
+    dest: "{{ tmp_zip }}"
+    mode: '0644'
+  register: dl
+  until: dl is succeeded
+  retries: 3
+  delay: 5
+
+- name: Ensure tmp extract dir exists
+  file:
+    path: "{{ tmp_extract }}"
+    state: directory
+    mode: '0755'
+
+- name: Unarchive into tmp extract dir
+  unarchive:
+    src: "{{ tmp_zip }}"
+    dest: "{{ tmp_extract }}"
+    remote_src: yes
+
+- name: Find top-level entries
+  find:
+    paths: "{{ tmp_extract }}"
+    file_type: any
+    recurse: no
+  register: extracted_entries
+
+- name: Set facts about extracted entries
+  set_fact:
+    top_entries_count: "{{ extracted_entries.files | length }}"
+    top_dirs: "{{ extracted_entries.files | selectattr('isdir','equalto', True) | list }}"
+
+- name: Copy contents from single top-level directory into webroot
+  copy:
+    remote_src: yes
+    src: "{{ (top_dirs | first).path }}/"
+    dest: "{{ web_root }}/"
+    owner: www-data
+    group: www-data
+    mode: '0644'
+    recurse: yes
+  when: top_entries_count == 1 and (top_dirs | length) == 1
+
+- name: Copy all extracted items into webroot
+  copy:
+    remote_src: yes
+    src: "{{ tmp_extract }}/"
+    dest: "{{ web_root }}/"
+    owner: www-data
+    group: www-data
+    mode: '0644'
+    recurse: yes
+  when: not (top_entries_count == 1 and (top_dirs | length) == 1)
+
+- name: Ensure directories have 0755
+  find:
+    paths: "{{ web_root }}"
+    file_type: directory
+  register: web_dirs
+
+- name: Set 0755 for directories
+  file:
+    path: "{{ item.path }}"
+    mode: '0755'
+  loop: "{{ web_dirs.files }}"
+  when: web_dirs.matched > 0
+
+- name: Remove default index.html if present
+  file:
+    path: "{{ web_root }}/index.html"
+    state: absent
+
+- name: Restart Apache
+  service:
+    name: apache2
+    state: restarted
+
+- name: Cleanup tmp files
+  file:
+    path: "{{ tmp_extract }}"
+    state: absent
+
+- name: Remove downloaded zip
+  file:
+    path: "{{ tmp_zip }}"
+    state: absent
+
 
 
 

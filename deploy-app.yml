@@ -14,9 +14,13 @@
 
 
 - name: Deploy PHP_Crud app
-  hosts: "{{ target_group }}"
+  hosts: "{{ target_group | default('staging') }}"
   become: true
-  
+  vars:
+    web_root: /var/www/html
+    tmp_zip: "/tmp/phpapp-{{ artifact_version }}.zip"
+    tmp_extract: "/tmp/phpapp_extract_{{ artifact_version }}"
+
   roles:
     - apache_php
     - mysql
