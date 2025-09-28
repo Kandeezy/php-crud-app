@@ -361,6 +361,7 @@ pipeline {
         withCredentials([sshUserPrivateKey(credentialsId: 'jenkins-ssh-key-id', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
           sh '''#!/usr/bin/env bash
             set -euo pipefail
+            ART_URL="${NEXUS_URL}/${NEXUS_REPO}/$VERSION_NUMBER/"
             ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
@@ -383,6 +384,7 @@ pipeline {
         withCredentials([sshUserPrivateKey(credentialsId: 'jenkins-ssh-key-id', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
           sh '''#!/usr/bin/env bash
             set -euo pipefail
+            ART_URL="${NEXUS_URL}/${NEXUS_REPO}/$VERSION_NUMBER/"
             ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
