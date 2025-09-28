@@ -329,7 +329,7 @@ pipeline {
 
           def v = userInput.get('VERSION_NUMBER')
           if (v == null || v.toString().trim() == '') {
-            error "VERSION_NUMBER required"
+            error "VERSION_NUMBER REQUIRED"
           }
           env.VERSION_NUMBER = v.toString().trim()
           //env.VERSION_NUMBER = userInput['VERSION_NUMBER'].trim()
