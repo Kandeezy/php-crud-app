@@ -327,13 +327,14 @@ pipeline {
             ok: 'Deploy'
           )
 
-          def v = userInput.get('VERSION_NUMBER')
+          def v = userInput instanceof Map ? userInput.get('VERSION_NUMBER') : userInput
           if (v == null || v.toString().trim() == '') {
             error "VERSION_NUMBER REQUIRED"
           }
+
           env.VERSION_NUMBER = v.toString().trim()
           //env.VERSION_NUMBER = userInput['VERSION_NUMBER'].trim()
-          echo "Version to deploy: ${env.VERSION_NUMBER}"
+          echo "Deploying artifact version: ${env.VERSION_NUMBER}"
 
           // Optional sanity: verify artifact exists in Nexus using nexus creds
           withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
