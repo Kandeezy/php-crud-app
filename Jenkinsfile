@@ -340,9 +340,9 @@ pipeline {
           withCredentials([usernamePassword(credentialsId: 'nexus-user-id', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PSW')]) {
             sh '''#!/usr/bin/env bash
               set -euo pipefail
-              ART="${env.VERSION_NUMBER}"
-              ART_NAME="phpapp-${PROMOTE_VERSION}.zip"
-              ART_URL="${NEXUS_URL}/${NEXUS_REPO}/${VERSION_NUMBER}/${APP_NAME}"
+              ART="$VERSION_NUMBER"
+              ART_NAME="phpapp-$VERSION_NUMBER.zip"
+              ART_URL="${NEXUS_URL}/${NEXUS_REPO}/$VERSION_NUMBER/${APP_NAME}"
               echo "Checking Nexus artifact: ${ART_URL}"
               HTTP=$(curl -s -o /dev/null -w '%{http_code}' -u "${NEXUS_USER}:${NEXUS_PSW}" "${ART_URL}" || echo "000")
               if [[ "$HTTP" != "200" && "$HTTP" != "201" ]]; then
@@ -364,7 +364,7 @@ pipeline {
             ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
-              -e "artifact_version=${VERSION_NUMBER}" \
+              -e "artifact_version=$VERSION_NUMBER" \
               -e "artifact_url=${ART_URL}" \
               -e "target_group=staging"
             '''
@@ -386,7 +386,7 @@ pipeline {
             ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
-              -e "artifact_version=${VERSION_NUMBER}" \
+              -e "artifact_version=$VERSION_NUMBER" \
               -e "artifact_url=${ART_URL}" \
               -e "target_group=production"
             '''
