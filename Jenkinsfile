@@ -309,6 +309,7 @@ pipeline {
             fi
             echo "Uploading ${ARTIFACT_PATH} -> ${NEXUS_UPLOAD_URL}"
             curl --fail -S -u "${NEXUS_USER}:${NEXUS_PSW}" -T "${WORKSPACE}/${ARTIFACT_PATH}" "${NEXUS_UPLOAD_URL}"
+            HTTP_CODE=$(curl -sS -u "${NEXUS_USER}:${NEXUS_PSW}" -w '%{http_code}' --upload-file "${ARTIFACT_FILE}" "${NEXUS_UPLOAD_URL}" -o /dev/null || echo "000")
             echo "Artifact Uploaded To Nexus."
             '''
         }
@@ -341,7 +342,7 @@ pipeline {
             sh '''#!/usr/bin/env bash
               set -euo pipefail
               ART="$VERSION_NUMBER"
-              ART_NAME="php-app-crud-$VERSION_NUMBER.zip"
+              ART_NAME="php-crud-app-$VERSION_NUMBER.zip"
               ART_URL="${NEXUS_URL}/${NEXUS_REPO}/$VERSION_NUMBER/"
               echo "Checking Nexus artifact: ${ART_URL}"
               HTTP=$(curl -s -o /dev/null -w '%{http_code}' -u "${NEXUS_USER}:${NEXUS_PSW}" "${ART_URL}" || echo "000")
@@ -361,12 +362,13 @@ pipeline {
         withCredentials([sshUserPrivateKey(credentialsId: 'jenkins-ssh-key-id', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
           sh '''#!/usr/bin/env bash
             set -euo pipefail
-            ART_URL="${NEXUS_URL}/${NEXUS_REPO}/$VERSION_NUMBER/"
+            ART_URL="${NEXUS_URL}/${NEXUS_REPO}/$VERSION_NUMBER"
+            ART_NAME="php-crud-app-$VERSION_NUMBER.zip"
             ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
               -e "artifact_version=$VERSION_NUMBER" \
-              -e "artifact_url=$ART_URL" \
+              -e "artifact_url=$ART_URL/$ART_NAME" \
               -e "target_group=staging"
             '''
         }
@@ -384,12 +386,13 @@ pipeline {
         withCredentials([sshUserPrivateKey(credentialsId: 'jenkins-ssh-key-id', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
           sh '''#!/usr/bin/env bash
             set -euo pipefail
-            ART_URL="${NEXUS_URL}/${NEXUS_REPO}/$VERSION_NUMBER/"
+            ART_URL="${NEXUS_URL}/${NEXUS_REPO}/$VERSION_NUMBER"
+            ART_NAME="php-crud-app-$VERSION_NUMBER.zip"
             ANSIBLE_HOST_KEY_CHECKING=False
             ansible-playbook -i "${INVENTORY}" "${ANSIBLE_PLAYBOOK}" \
               --private-key "$SSH_KEY" -u "$SSH_USER" \
               -e "artifact_version=$VERSION_NUMBER" \
-              -e "artifact_url=$ART_URL" \
+              -e "artifact_url=$ART_URL/$ART_NAME" \
               -e "target_group=production"
             '''
         }

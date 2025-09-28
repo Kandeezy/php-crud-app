@@ -44,135 +44,186 @@
 
 
 
-- name: Ensure unzip/php packages present (Ubuntu)
+tasks file for deploy_app
+- name: Ensure archive tools are present
   apt:
     name:
       - unzip
       - bzip2
       - xz-utils
-      - zip
       - zstd
-      - php
-      - libapache2-mod-php
+      - zip
     state: present
     update_cache: yes
+  become: yes
 
-- name: Debug vars
-  debug: msg="artifact_url={{ artifact_url }}, artifact_version={{ artifact_version }}"
+- name: Ensure web root exists
+  file:
+    path: /var/www/html
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
 
-#- name: Download artifact from Nexus to remote /tmp
-  #get_url:
-    #url: "{{ artifact_url }}"
-    #dest: "{{ tmp_zip }}"
-    #mode: '0644'
-  #register: dl
-  #until: dl is succeeded
-  #retries: 3
-  #delay: 5
-
-- name: Download artifact from Nexus (with retries)
+- name: Download artifact from Nexus
   get_url:
     url: "{{ artifact_url }}"
-    dest: "{{ tmp_zip }}"
-    mode: '0644'
-    url_username: "{{ nexus_user | default(lookup('env','NEXUS_USER')) }}"
-    url_password: "{{ nexus_pass | default(lookup('env','NEXUS_PSW')) }}"
-    force: yes
-  register: dl
-  retries: 3
-  delay: 5
-  until: dl is succeeded
-
-- name: Verify zip file looks like a zip
-  command: file "{{ tmp_zip }}"
-  register: fileinfo
-  changed_when: false
-
-- name: Fail if remote file is not a zip
-  fail:
-    msg: "Downloaded file is not a zip: {{ fileinfo.stdout }}"
-  when: fileinfo.stdout is not search('Zip archive data')
+    dest: /tmp/php-crud-app-{{ artifact_version }}.zip
 
 
-
-- name: Ensure tmp extract dir exists
-  file:
-    path: "{{ tmp_extract }}"
-    state: directory
-    mode: '0755'
-
-- name: Unarchive into tmp extract dir
+- name: Unarchive artifact
+  #when: artifact_path is defined and artifact_path != ''
   unarchive:
-    src: "{{ tmp_zip }}"
-    dest: "{{ tmp_extract }}"
+    src: "/tmp/php-crud-app-{{ artifact_path }}.zip"
+    dest: /var/www/html/
     remote_src: yes
+  notify: Restart Apache
 
-- name: Find top-level entries
-  find:
-    paths: "{{ tmp_extract }}"
-    file_type: any
-    recurse: no
-  register: extracted_entries
+# - name: Fallback index.php
+#   when: artifact_path is not defined or artifact_path == ''
+#   copy:
+#     src: files/index.php
+#     dest: /var/www/html/index.php
+#     owner: www-data
+#     group: www-data
+#     mode: '0644'
+#   notify: Restart Apache
 
-- name: Set facts about extracted entries
-  set_fact:
-    top_entries_count: "{{ extracted_entries.files | length }}"
-    top_dirs: "{{ extracted_entries.files | selectattr('isdir','equalto', True) | list }}"
 
-- name: Copy contents from single top-level directory into webroot
-  copy:
-    remote_src: yes
-    src: "{{ (top_dirs | first).path }}/"
-    dest: "{{ web_root }}/"
-    owner: www-data
-    group: www-data
-    mode: '0644'
-    recurse: yes
-  when: top_entries_count == 1 and (top_dirs | length) == 1
 
-- name: Copy all extracted items into webroot
-  copy:
-    remote_src: yes
-    src: "{{ tmp_extract }}/"
-    dest: "{{ web_root }}/"
-    owner: www-data
-    group: www-data
-    mode: '0644'
-    recurse: yes
-  when: not (top_entries_count == 1 and (top_dirs | length) == 1)
 
-- name: Ensure directories have 0755
-  find:
-    paths: "{{ web_root }}"
-    file_type: directory
-  register: web_dirs
 
-- name: Set 0755 for directories
-  file:
-    path: "{{ item.path }}"
-    mode: '0755'
-  loop: "{{ web_dirs.files }}"
-  when: web_dirs.matched > 0
 
-- name: Remove default index.html if present
-  file:
-    path: "{{ web_root }}/index.html"
-    state: absent
 
-- name: Restart Apache
-  service:
-    name: apache2
-    state: restarted
+# - name: Ensure unzip/php packages present (Ubuntu)
+#   apt:
+#     name:
+#       - unzip
+#       - bzip2
+#       - xz-utils
+#       - zip
+#       - zstd
+#       - php
+#       - libapache2-mod-php
+#     state: present
+#     update_cache: yes
 
-- name: Cleanup tmp files
-  file:
-    path: "{{ tmp_extract }}"
-    state: absent
+# - name: Debug vars
+#   debug: msg="artifact_url={{ artifact_url }}, artifact_version={{ artifact_version }}"
 
-- name: Remove downloaded zip
-  file:
-    path: "{{ tmp_zip }}"
-    state: absent
+# #- name: Download artifact from Nexus to remote /tmp
+#   #get_url:
+#     #url: "{{ artifact_url }}"
+#     #dest: "{{ tmp_zip }}"
+#     #mode: '0644'
+#   #register: dl
+#   #until: dl is succeeded
+#   #retries: 3
+#   #delay: 5
+
+# - name: Download artifact from Nexus (with retries)
+#   get_url:
+#     url: "{{ artifact_url }}"
+#     dest: "{{ tmp_zip }}"
+#     mode: '0644'
+#     url_username: "{{ nexus_user | default(lookup('env','NEXUS_USER')) }}"
+#     url_password: "{{ nexus_pass | default(lookup('env','NEXUS_PSW')) }}"
+#     force: yes
+#   register: dl
+#   retries: 3
+#   delay: 5
+#   until: dl is succeeded
+
+# - name: Verify zip file looks like a zip
+#   command: file "{{ tmp_zip }}"
+#   register: fileinfo
+#   changed_when: false
+
+# - name: Fail if remote file is not a zip
+#   fail:
+#     msg: "Downloaded file is not a zip: {{ fileinfo.stdout }}"
+#   when: fileinfo.stdout is not search('Zip archive data')
+
+
+
+# - name: Ensure tmp extract dir exists
+#   file:
+#     path: "{{ tmp_extract }}"
+#     state: directory
+#     mode: '0755'
+
+# - name: Unarchive into tmp extract dir
+#   unarchive:
+#     src: "{{ tmp_zip }}"
+#     dest: "{{ tmp_extract }}"
+#     remote_src: yes
+
+# - name: Find top-level entries
+#   find:
+#     paths: "{{ tmp_extract }}"
+#     file_type: any
+#     recurse: no
+#   register: extracted_entries
+
+# - name: Set facts about extracted entries
+#   set_fact:
+#     top_entries_count: "{{ extracted_entries.files | length }}"
+#     top_dirs: "{{ extracted_entries.files | selectattr('isdir','equalto', True) | list }}"
+
+# - name: Copy contents from single top-level directory into webroot
+#   copy:
+#     remote_src: yes
+#     src: "{{ (top_dirs | first).path }}/"
+#     dest: "{{ web_root }}/"
+#     owner: www-data
+#     group: www-data
+#     mode: '0644'
+#     recurse: yes
+#   when: top_entries_count == 1 and (top_dirs | length) == 1
+
+# - name: Copy all extracted items into webroot
+#   copy:
+#     remote_src: yes
+#     src: "{{ tmp_extract }}/"
+#     dest: "{{ web_root }}/"
+#     owner: www-data
+#     group: www-data
+#     mode: '0644'
+#     recurse: yes
+#   when: not (top_entries_count == 1 and (top_dirs | length) == 1)
+
+# - name: Ensure directories have 0755
+#   find:
+#     paths: "{{ web_root }}"
+#     file_type: directory
+#   register: web_dirs
+
+# - name: Set 0755 for directories
+#   file:
+#     path: "{{ item.path }}"
+#     mode: '0755'
+#   loop: "{{ web_dirs.files }}"
+#   when: web_dirs.matched > 0
+
+# - name: Remove default index.html if present
+#   file:
+#     path: "{{ web_root }}/index.html"
+#     state: absent
+
+# - name: Restart Apache
+#   service:
+#     name: apache2
+#     state: restarted
+
+# - name: Cleanup tmp files
+#   file:
+#     path: "{{ tmp_extract }}"
+#     state: absent
+
+# - name: Remove downloaded zip
+#   file:
+#     path: "{{ tmp_zip }}"
+#     state: absent
 
 
 
