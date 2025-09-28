@@ -323,10 +323,16 @@ pipeline {
           // Prompt user for the version to promote (manual input)
           def userInput = input(
             message: 'Enter the artifact version to deploy',
-            parameters: [string(name: 'VERSION_NUMBER', defaultValue: "${env.VERSION ?: ''}", description: 'Artifact version (e.g. 42)')],
-            ok: 'Promote'
+            parameters: [string(name: 'VERSION_NUMBER', defaultValue: "${env.VERSION ?: ''}")],
+            ok: 'Deploy'
           )
-          env.VERSION_NUMBER = userInput['VERSION_NUMBER'].trim()
+
+          def v = userInput.get('VERSION_NUMBER')
+          if (v == null || v.toString().trim() == '') {
+            error "VERSION_NUMBER required"
+          }
+          env.VERSION_NUMBER = v.toString().trim()
+          //env.VERSION_NUMBER = userInput['VERSION_NUMBER'].trim()
           echo "Version to deploy: ${env.VERSION_NUMBER}"
 
           // Optional sanity: verify artifact exists in Nexus using nexus creds
